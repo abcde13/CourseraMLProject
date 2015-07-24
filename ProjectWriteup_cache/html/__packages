@@ -1,0 +1,7 @@
+base
+tidyr
+dplyr
+ggplot2
+lattice
+caret
+randomForest

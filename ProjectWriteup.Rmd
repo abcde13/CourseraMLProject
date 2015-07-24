@@ -1,0 +1,130 @@
+---
+title: "Predicting  Form of Exercise from Sensor Data"
+author: "Joraaver Chahal"
+date: "July 18, 2015"
+output: html_document
+---
+
+##Abstract
+
+The science in lifting has become very prevalent in today's technology-driven society. However, both recreational and professionals have one thing in common when it comes to lifting weights--injuries due to bad form. Professional video recording equipment, posting form-checks on reddit, and even asking for a friend to spot the lift are all common practices, ultimately aiming to perfect one's form. With the onset of wearables that can tell when someone's accomplished a walking goal or remind him to get up after 20 minutes, can they also tell lifters when their form is off? This study attempts to predict when a lifter's form is good or bad, via the data provided here: http://groupware.les.inf.puc-rio.br/har (see Weight Lifting Exercises Dataset) . In the study, the participants were asked to perform bicep curls, each in one of 5 different manners (labeled A-E). With the provided sensor data, this report details how accurately I came to predicting the form of each of the lifters using machine learning techniques.
+
+##Data Preparation
+
+The training and testing datasets were provided at these two links:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+Simply downloading them and reading them in via `read.csv` suffices.
+
+```{r, cache=T, echo=F}
+pml.training <- read.csv("C:/Users/SmallRig/Downloads/pml-training.csv",header=T,stringsAsFactors = F,na.strings=c("NA","#DIV/0!",""))
+pml.testing <- read.csv("C:/Users/SmallRig/Downloads/pml-testing.csv",header=T,stringsAsFactors = F,na.strings=c("NA","#DIV/0!",""))
+```
+```
+pml.training <- read.csv("Path-to-your-csv/pml-training.csv",header=T,stringsAsFactors = F,na.strings=c("NA","#DIV/0!","")))
+pml.testing <- read.csv("Path-to-your-csv/pml-testing.csv",header=T,stringsAsFactors = F,na.strings=c("NA","#DIV/0!","")))
+```
+
+##Data Exploration
+
+I like to do my work with tidy and dplyr, and provide visualizations via ggplot2, so I'll load those now.
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+###Data cleanup
+
+First, a quick glance at the size of the training data frame tells me that there are a lot of predictors to deal with.
+```{r}
+dim(pml.training)
+```
+
+However, the first columns of the data frame are row number and username, and other qualitative stuff that I don't see necessarily helping my analysis. Or, rather, they wouldn't stand for how I should be predicting the class of exercised. I recognized early on that just taking `user_name` and `num_window` would suffice in getting most of the correct predictions. However, this is not utilizing the sensor data, making the project trival. Thus, I removed those columns immediately.
+
+```{r}
+pml.training <- pml.training[,-c(1:7)]
+pml.testing <- pml.testing[,-c(1:7)]
+```
+
+Now, I went ahead and removed any columns  in the training set that weren't in the testing set and any columns and rows if any in the training set were NA's.
+
+```{r cache=T}
+nonempty_cols= c()
+for(i in 1:dim(pml.testing)[2]){
+  if(sum(is.na(pml.testing[,i])) == 0 )
+    nonempty_cols = c(nonempty_cols,colnames(pml.testing)[i])
+}
+nonempty_cols[length(nonempty_cols)] = "classe"
+training = pml.training[,colnames(pml.training) %in% nonempty_cols]
+
+empty_rows = c()
+
+for(i in 1:dim(training)[1]){
+    empty_rows = c(empty_rows,sum(is.na(training[i,])))
+}
+training = training[empty_rows == 0,]
+
+```
+
+This is the final distribution of classes:
+
+```{r}
+table(training$classe)
+```
+
+##Machine Learning Techniques
+
+I'll load the `caret` package now.
+```{r}
+library(caret)
+```
+
+After playing around with the data for a little while, it became obvious that the more samples I used in my training set, the better. Smaller samples at around 500~600 for training/cross-validation (making the training set even smaller) only resulted in about 82% accuracy. However, sampling larger sets rose the accuracy significantly, until I hit about 98% accuracy. Nonetheless, the smaller models actually gave me a chance to plot out and see if the predictors were heading in the right direction. I used the random forest method for the learning algorithm (I would have used parallel random forest, but RStudio said the package parallel isn't available for R 3.2.1)
+
+
+```{r cache=T}
+set.seed(12323)
+training$classe = factor(training$classe)
+training = sample_n(training,size=6000)
+trainIndex = createDataPartition(training$classe,p=0.6,list=F)
+to_train = training[trainIndex,]
+to_validate = training[-trainIndex,]
+model = train(to_train[,-c(dim(to_train)[2])], to_train$classe,trControl=trainControl(method="cv",number=10),method="rf")
+model$results
+```
+
+As you can see above, the accuracy of the model was about 97.4%, leaving a little room for error. The below graph alos shows how the predictors stacked in importance:
+
+```{r fig.width=7, fig.height=7}
+plot(varImp(model))
+```
+
+I decided to go ahead with this model even though most of the predictors towards the bottom didn't show much improvement simply because the model seemed to do a good job of fitting the validation set. Just to double check how the variables were factoring, I plotted the predictors `roll_belt` against `pitch_forearm`, with `yaw_belt`as the size, and `classe` as the color.
+
+```{r}
+qplot(to_train$roll_belt,to_train$pitch_forearm,color=to_train$classe,size=to_train$yaw_belt, alpha=I(0.5))
+```
+
+There is a very solid distinction between these sets of variables now. `roll_belt`, as the model shows, creates a great rift between the sets of variables, with `pitch_forearm` describing perhaps the left half of the data better. The third most variable, `yaw_belt`, also demonstrates a distinction between the two groups, and an especially clear difference in class E. All in all, the model seems to have done a good job, and it makes sense intuitively why these predictors would account for the most variance in the data.
+
+The prediction below on the validation set provides the out of sample error:
+
+```{r fig.width=10, fig.height=7}
+validation = predict(model,to_validate,"raw")
+confusionMatrix(validation,to_validate$classe)
+```
+
+The out of sample error is 97.4%, which is pretty good, when the number of samples to validate from is `r nrow(to_validate)`
+
+Finally, my predicted values for the set were as follows:
+```{r}
+to_keep = colnames(training)
+to_test = pml.testing[ ,colnames(pml.testing) %in% to_keep]
+prediction = predict(model,to_test,"raw")
+prediction
+```
