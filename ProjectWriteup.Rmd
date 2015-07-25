@@ -84,7 +84,7 @@ I'll load the `caret` package now.
 library(caret)
 ```
 
-After playing around with the data for a little while, it became obvious that the more samples I used in my training set, the better. Smaller samples at around 500~600 for training/cross-validation (making the training set even smaller) only resulted in about 82% accuracy. However, sampling larger sets rose the accuracy significantly, until I hit about 98% accuracy. Nonetheless, the smaller models actually gave me a chance to plot out and see if the predictors were heading in the right direction. I used the random forest method for the learning algorithm (I would have used parallel random forest, but RStudio said the package parallel isn't available for R 3.2.1). I also used simple k-fold cross validation with k=10, which is a generally recommended value between variance in validation and selection bias.
+After playing around with the data for a little while, it became obvious that the more samples I used in my training set, the better. Smaller samples at around 500~600 for training/cross-validation (making the training set even smaller) only resulted in about 82% accuracy. However, sampling larger sets rose the accuracy significantly, until I hit about 98% accuracy. Nonetheless, the smaller models actually gave me a chance to plot out and see if the predictors were heading in the right direction. I used the random forest method for the learning algorithm (I would have used parallel random forest, but RStudio said the package parallel isn't available for R 3.2.1). I also used simple k-fold cross validation with k=10, which is a generally recommended value between the variance in validation and selection bias, although it would normally help to examine the how big the samples sizes would become to determine k.
 
 
 ```{r cache=T}
@@ -98,13 +98,13 @@ model = train(to_train[,-c(dim(to_train)[2])], to_train$classe,trControl=trainCo
 model$results
 ```
 
-As you can see above, the accuracy of the model was about 97.4%, leaving a little room for error. The below graph alos shows how the predictors stacked in importance:
+As you can see above, the accuracy of the model was about 97.4%, leaving a little room for error. The below graph also shows how the predictors stacked in importance:
 
 ```{r fig.width=7, fig.height=7}
 plot(varImp(model))
 ```
 
-I decided to go ahead with this model even though most of the predictors towards the bottom didn't show much improvement simply because the model seemed to do a good job of fitting the validation set. Just to double check how the variables were factoring, I plotted the predictors `roll_belt` against `pitch_forearm`, with `yaw_belt`as the size, and `classe` as the color.
+I decided to go ahead with this model even though most of the predictors towards the bottom didn't show much improvement simply because the model seemed to do a good job of fitting the validation set. Just to double check how the variables were factoring in, I plotted the predictors `roll_belt` against `pitch_forearm`, with `yaw_belt`as the size, and `classe` as the color.
 
 ```{r}
 qplot(to_train$roll_belt,to_train$pitch_forearm,color=to_train$classe,size=to_train$yaw_belt, alpha=I(0.5))
