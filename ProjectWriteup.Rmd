@@ -84,7 +84,7 @@ I'll load the `caret` package now.
 library(caret)
 ```
 
-After playing around with the data for a little while, it became obvious that the more samples I used in my training set, the better. Smaller samples at around 500~600 for training/cross-validation (making the training set even smaller) only resulted in about 82% accuracy. However, sampling larger sets rose the accuracy significantly, until I hit about 98% accuracy. Nonetheless, the smaller models actually gave me a chance to plot out and see if the predictors were heading in the right direction. I used the random forest method for the learning algorithm (I would have used parallel random forest, but RStudio said the package parallel isn't available for R 3.2.1)
+After playing around with the data for a little while, it became obvious that the more samples I used in my training set, the better. Smaller samples at around 500~600 for training/cross-validation (making the training set even smaller) only resulted in about 82% accuracy. However, sampling larger sets rose the accuracy significantly, until I hit about 98% accuracy. Nonetheless, the smaller models actually gave me a chance to plot out and see if the predictors were heading in the right direction. I used the random forest method for the learning algorithm (I would have used parallel random forest, but RStudio said the package parallel isn't available for R 3.2.1). I also used simple k-fold cross validation with k=10, which is a generally recommended value between variance in validation and selection bias.
 
 
 ```{r cache=T}
